@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "crane-founder",
+  "name": "card-binder",
   "main": "src/worker.js",
   "compatibility_date": "2026-11-22",
   "workers_dev": true,
