@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crane-founder",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-22",
+  "workers_dev": true,
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  // Fill these two after enabling Cloudflare Access (see README). Empty = API stays locked.
+  "vars": { "TEAM_DOMAIN": "", "POLICY_AUD": "" }
+}
