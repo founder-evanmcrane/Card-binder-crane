@@ -1,8 +1,9 @@
 # Card Binder: Project Log and Plan
 
-Last updated: Nov 20, 2026
-Live app: https://claude.ai/artifact/VzWhW36mAveisLW1setcov
-Source plan: "gameplan for baseball card app" (Gmail PDF, Nov 20, 2026)
+Last updated: Nov 24, 2026
+Live app: https://card-binder.evanmcrane.workers.dev/
+GitHub: https://github.com/founder-evanmcrane/Card-binder-crane
+Historical source plan: "gameplan for baseball card app" (Gmail PDF, Nov 20, 2026)
 
 ---
 
@@ -32,105 +33,93 @@ A personal app on my phone for my own baseball card collection. I take a picture
 
 | Decision | Choice | Why |
 |---|---|---|
-| App format | Phone-friendly web page (single HTML file, Add to Home Screen) | The gameplan suggested Streamlit, but it can't be installed on a phone and I want to take photos on my device |
-| Storage | Browser storage on the device (IndexedDB) | Simple, private, no account or server |
-| Card reading | Claude reads the photos (the page's "ask Claude" feature) | Fills in the fields without a separate OCR or catalog service |
-| Valuation, for now | Prefilled eBay search links, plus a screenshot-based average | No licensed price data yet, and the page can't call outside sites |
-| Value history | Each save adds an entry | Matches the "snapshots, not overwrite" principle |
-| Collection view | Grid of card images | Easier to scan and search than a list |
+| App format | Phone-friendly web app, currently deployed as a Cloudflare Worker | Current live deployment is the Cloudflare app, not the earlier Claude Artifact |
+| Git source of truth | GitHub repository `founder-evanmcrane/Card-binder-crane` | Intended home for recovered and maintained app source |
+| Deployment target | Existing Cloudflare Worker named `card-binder` | Confirmed in Cloudflare dashboard on Nov 24, 2026 |
+| Git deployment | Cloudflare Workers Builds connected to GitHub; production branch `main` | Connection established; builds deliberately disabled until source is recovered |
+| Data handling | Current live app shows backup and restore; actual persistence/storage implementation still needs source inspection | Do not assume the older IndexedDB design is still used |
 
 ---
 
 ## 3. What has been done
 
-### Version 1: collection foundation
-- Add a card with front and back photos (photos are shrunk before saving).
-- Fields: player, year, card number, brand and set, parallel, serial number, raw or graded (grader and grade), amount paid, date acquired, notes.
-- Search by player, set, year, parallel and notes.
-- Card page with value history, an "add value" entry, and eBay "Sold" and "For sale" links built from the card's details.
-- Summary strip with card count, total paid, total value.
-- "Back up my list" shows a copyable CSV (details only, no photos).
+### Historical standalone/Claude Artifact version (Nov 20–21, 2026)
+The Gmail export `Gmail - Card Binder HTML.txt` contains a complete single-file HTML app from the earlier Claude Artifact stage. It uses IndexedDB and Claude Artifact-specific calls such as `claude.use('sample')` and `claude.use('downloads')`. This is useful historical reference material, but it is **not verified as the source of the current Cloudflare Worker v7 app** and should not be deployed as a replacement.
 
-### Save problem and fix
-- Reported: Save did nothing on the published link.
-- I could not reproduce it in a test browser, so the exact cause is unconfirmed. The likely cause was a storage write that never finished and froze the screen.
-- Fix: saving no longer waits on storage, storage calls time out, an on-screen note says "Saved on this device" or warns when storage refused it, and unexpected errors now show on screen.
-- The downloaded copy of the file saved correctly and I recorded a first card in it.
+The historical version included:
+- Add/edit cards with front and back photos.
+- Collection search and grid/list views.
+- Claude photo scanning and screenshot-based price checks.
+- Value history, eBay search links, and backup/restore features.
 
-### Version 2 (published Nov 20, 2026)
-- **Grid view:** cards show as images, three across, with player, set, parallel or grade, and a value tag.
-- **Photo scan:** adding a photo asks Claude to fill in the fields. It leaves blanks where it can't see something, only fills empty fields, and highlights fields it is unsure of. "Scan photos again" overwrites.
-- **Price check from a screenshot:** open the eBay sold link, screenshot the results, add the screenshot on the card page. Claude reads the listings and keeps only those that match the card. The app shows the average, median, range, and how many it skipped, with "Save as value." It flags when the screenshot shows asking prices rather than sold prices.
-- **Fixes:** gain/loss no longer counts a value as profit when no price paid was entered. Card numbers display in capitals. Paid shows a dash until a price is entered.
+### Current Cloudflare deployment (observed Nov 24, 2026)
+The live URL is `https://card-binder.evanmcrane.workers.dev/`. The app displayed **Card Binder v7 · Nov 23, 2026 · Worker · data format v1** and included:
+- Add card.
+- Add many cards from photos.
+- Two photos per card (front then back).
+- One photo per card (front only).
+- Uncertain reads marked for review.
+- Daily scan usage indicator.
+- Collection summary (card count, Paid, Value).
+- Backup and restore.
 
-### Testing so far
-- Save, grid, and price-check logic were tested in a test browser with a stand-in for Claude.
-- Real scanning and real price reading have **not** yet been tried on my phone.
+This is a UI observation only. The underlying source, API implementation, storage bindings, and data persistence mechanism have not yet been recovered or verified.
 
-### Progress against the gameplan phases
+### GitHub repository and Cloudflare Builds setup (Nov 24, 2026)
+- GitHub repository: `founder-evanmcrane/Card-binder-crane`.
+- The repository initially contained documentation/configuration but not the deployed application source.
+- Confirmed missing from the repository tree: `src/worker.js`, `public/index.html`, and `test/worker.test.mjs`.
+- Cloudflare dashboard confirmed the deployed Worker name is `card-binder`.
+- GitHub repository is connected in Cloudflare Workers Builds, with production branch `main`.
+- **Disable builds is ON**. Automatic builds/deployments have not been enabled because the application source is not yet in the repository.
+- Updated `wrangler.jsonc` from Worker name `crane-founder` to `card-binder` in commit `00f5c754eeb53be8295282d1888583010f91669b`. This resolves the name mismatch shown by Cloudflare's dashboard warning.
+- ChatGPT's current connected tools can read/write the GitHub repository but do not expose Cloudflare account/API access. Therefore the deployed Worker bundle/source cannot be fetched directly from Cloudflare in this session yet. No claim is made that source recovery is complete.
 
-| Phase | Status |
-|---|---|
-| 0. Requirements and licensing | Scope decided. Data provider not chosen. Licensing not checked |
-| 1. Collection foundation | Done in adapted form. No CSV import yet |
-| 2. Card identification | Partly done: Claude reads photos and fills fields. No catalog matching, no top-three candidate list, no photo quality checks or cropping |
-| 3. Comparable sales and valuation | Stopgap only: screenshot average. No licensed sales data, no weighting or confidence score |
-| 4. Collection analytics | Minimal: totals and per-card history |
-| 5. Pilot and hardening | Not started |
-
----
-
-## 4. Known issues and limits
-
-- **Two separate data stores.** The downloaded file and the published link each keep their own cards. My first test card (2026 Topps Tribute Ronald Acuña Jr. relic) lives in the downloaded copy.
-- **Scan and price check only work in the published link**, not the downloaded file.
-- **Link storage not yet confirmed on my phone.** The app now says on screen whether a save worked.
-- **Data lives only on the device.** Clearing browser data could wipe it. The CSV backup leaves out photos and there is no restore.
-- **Serial typo to fix:** the saved Acuña shows 151/193, but the listing shows /199.
-- **Test photos were listing screenshots**, not photos of real cards. The back photo is sideways. No rotate or crop yet.
-- **Price check depends on the screenshot.** Blurry, short, or mixed results give weak averages. It is a rough estimate, not a market value.
-- **Parallels can't always be told apart from a photo.** The app should flag these for me to confirm.
-- **Scans use my own Claude usage**, and the first use asks permission.
-- **Search covers my own collection only**, not a catalog of all cards.
+### Current recovery blocker
+The old Gmail HTML is not the deployed v7 source. Reconstructing the current app from that file would be a rewrite/downgrade, not source recovery. The actual deployed Worker source must be retrieved from the Cloudflare account (for example, through an authenticated Cloudflare dashboard/API/MCP connection or the original development environment that deployed it). Once retrieved, commit the recovered source to this repository, inspect its bindings/secrets and storage model, add tests, and only then enable production builds.
 
 ---
 
-## 5. Next steps
+## 4. Historical product requirements and principles
 
-### A. Do next (testing, no building)
-1. Open the published link on my phone and Add to Home Screen.
-2. Add a card with real front and back photos. Check the scan fills the right fields and highlights uncertain ones.
-3. Close and reopen the app. Confirm the card is still there.
-4. Fix the Acuña serial and decide which copy is the real one (the link is the one with scanning).
-5. Run a price check with a real eBay sold-results screenshot. Compare the average to what I'd estimate by eye.
-6. Add 20 to 30 cards and note what is annoying.
+The original project was intended to be a personal phone-friendly baseball card collection:
+- Type as little as possible; photos should do most of the work.
+- Personal use only.
+- Keep collection browsing simple.
+- Do not scrape websites; use licensed data or official APIs for automated prices.
+- Never claim to grade a raw card from a photo.
+- Show valuation ranges and sources.
+- Never silently mix parallels or grades.
+- Preserve value history as snapshots.
+- Ask the user to confirm uncertain identification.
 
-### B. Near-term improvements
-- Backup and restore that includes photos.
-- If browser storage proves unreliable: move cards and photos to the app's own database and file storage so they survive clearing and sync across devices.
-- Auto-rotate and crop photos, and warn about blur or glare.
-- A "confirm this card" step when the scan is unsure, showing a few likely matches.
-- Quantity and status fields (owned, sent for grading, and so on).
-- Simple sort options (recently added, highest value). Keep it light.
-- Flag cards with old or missing values.
-
-### C. Later (needs a backend and a data license)
-- Choose a data provider. The gameplan names Card Hedge (identification, catalog, comps) and The Card API (completed sales). Check price, personal-use terms, and whether storing results is allowed.
-- Build a small backend with a swappable "market source" layer so providers can change.
-- Automatic identification and sold-price averages with no screenshot step.
-- Valuation with a range, confidence, and the actual comparable sales shown, as laid out in the gameplan.
-- Optional: estimated net proceeds after fees, only if I ever want it.
-- Optional: offline install support with a proper app wrapper.
-
-### Success checks (from the gameplan, adjusted for personal use)
-- The right card is the top result most of the time, and in the top three nearly always.
-- Nothing is saved as confirmed when the app is unsure.
-- Every price shows where it came from.
-- A different parallel or grade is never mixed in silently.
-- I can export my whole collection.
+Earlier decisions included local browser storage (IndexedDB), Claude image reading, screenshot-based sold-price estimation, and a visual card grid. These describe the historical standalone version and are not confirmed architectural decisions for the current Cloudflare app.
 
 ---
 
-## 6. Resuming this project
+## 5. Known issues and limits
 
-To pick this up in a new chat, share this file and the live link, then say which step in section 5 to work on. The app is a single HTML file (`card-binder.html`) that uses the page's "ask Claude" feature with image support for scanning. Cards and photos are saved in browser storage on the device.
+- The deployed Cloudflare v7 source is not yet present in GitHub.
+- The current app's storage location, database/object-storage bindings, API routes, authentication, and secret configuration are not yet verified.
+- The earlier standalone HTML is a historical version and depends on Claude Artifact APIs; it is not a drop-in Worker app.
+- The project plan and Python/Streamlit build spec are planning/reference documents, not proof of the current implementation.
+- Do not enable production builds until the recovered source and Wrangler configuration are checked.
+- Do not overwrite the live Worker with the old HTML or a speculative reconstruction.
+
+---
+
+## 6. Next steps
+
+1. Obtain authenticated read access to the Cloudflare account or the original development environment that deployed Worker `card-binder`.
+2. Export/retrieve the actual deployed Worker source and any static assets. Preserve the current deployment as a rollback point.
+3. Identify all bindings, secrets, routes, and data stores. Determine whether user collection data is stored in browser storage, D1, R2, KV, Durable Objects, or another service; do not guess.
+4. Add the recovered source to this GitHub repository and verify it matches the live app's behavior.
+5. Add tests and validate the build without promoting a new production deployment.
+6. Enable Cloudflare preview builds, verify preview behavior, then enable production builds from `main`.
+7. Keep this log, README, and project plan aligned with verified implementation details.
+
+---
+
+## 7. Resuming this project
+
+Current priority is **recovering the actual source of the Cloudflare Worker v7 app**, not rebuilding the older Claude Artifact app. Keep Cloudflare builds disabled until the recovered source has been checked into GitHub and successfully validated.
