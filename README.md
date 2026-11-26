@@ -1,48 +1,68 @@
 # Card Binder
 
-A personal baseball card tracker. Cards and photos are stored in each browser (IndexedDB), not on the server. The Cloudflare Worker serves the page and provides the scan and price-check API, behind Cloudflare Access.
+A personal baseball card tracker. The browser app stores cards and photos in IndexedDB on that browser/device; the Cloudflare Worker serves the app and provides the scan and price-check API.
 
-## Layout
+## Source layout
 
 ```
-public/index.html   The app page (HTML, CSS, JavaScript)
-src/worker.js       API routes and Access token check; serves the page
-wrangler.toml       Worker config
+public/index.html   Phone-friendly app page (HTML, CSS, JavaScript)
+src/worker.js       API routes, Cloudflare Access JWT check, and page response
+wrangler.jsonc      Canonical Worker configuration
 ```
+
+The page is imported by the Worker as a text module. The `Text` rule in `wrangler.jsonc` is required for that import. Keep the app page at `public/index.html` and the Worker entry point at `src/worker.js`.
 
 ## API
 
-- `GET /api/status`: whether scanning is available, and why not.
-- `POST /api/scan`: reads one or two card photos, returns the card fields as JSON.
-- `POST /api/price`: reads marketplace screenshots, returns matching listings. Requires `ANTHROPIC_API_KEY`.
+- `GET /api/status`: reports whether scanning is available and why it is not.
+- `POST /api/scan`: reads one or two card photos and returns card fields as JSON.
+- `POST /api/price`: reads marketplace screenshots and returns visible listings. Requires `ANTHROPIC_API_KEY`.
 
-Every route except `/api/status` requires a valid Cloudflare Access login.
+All API routes require a valid Cloudflare Access JWT. The ordinary page is served without an API login check.
 
-## Setup
+## Required Cloudflare configuration
 
-1. Install Wrangler and sign in: `npm install -g wrangler` then `wrangler login`.
-2. In the Cloudflare dashboard, create a Zero Trust Access application for the Worker's hostname and note the team domain and the application audience (AUD) tag.
-3. Set the non-secret values in `wrangler.toml` under `[vars]` (or in the dashboard): `TEAM_DOMAIN`, `POLICY_AUD`, optionally `DAILY_LIMIT`.
-4. Choose a scan backend:
-   - Workers AI: uncomment `[ai]` in `wrangler.toml`.
-   - Anthropic: `wrangler secret put ANTHROPIC_API_KEY`. Price check needs this.
-5. Optional: create a KV namespace for the daily limit and uncomment `[[kv_namespaces]]`.
-6. Deploy: `wrangler deploy`.
+Set these in the Worker settings; do not commit their values:
 
-## Local checks
+- `TEAM_DOMAIN`: Cloudflare Access team domain, including `https://` and with no trailing slash.
+- `POLICY_AUD`: Access application's audience (AUD) tag.
+- `ANTHROPIC_API_KEY`: secret used for Anthropic requests. Price checks require this key; scans can use Workers AI instead if an `AI` binding is configured.
 
+Optional:
+
+- `AI`: Workers AI binding. If configured, scans use Workers AI unless `SCAN_BACKEND=anthropic`.
+- `USAGE`: KV namespace binding for shared daily usage counts. Without it, the count is per Worker isolate and is not globally consistent.
+- `DAILY_LIMIT`: daily API call limit; defaults to 150.
+- `SCAN_BACKEND`: set to `anthropic` to force Anthropic for scans when both backends are configured.
+- `AI_MODEL_QUICK`, `AI_MODEL_DEEP`, `MODEL_QUICK`, `MODEL_DEEP`: optional model overrides.
+
+The Wrangler config sets `keep_vars: true` so dashboard-managed plain-text variables are not cleared by a deploy. Resource bindings such as Workers AI and KV must still be represented in Wrangler configuration before deploying if they are used. Do not deploy until the configured bindings have been checked against the Worker settings.
+
+## Local setup and validation
+
+1. Install Node.js (22 or newer).
+2. Install dependencies: `npm install`.
+3. Run the local build check: `npm run check`. This executes `wrangler deploy --dry-run`; it bundles the Worker without deploying it.
+4. Run locally with `npx wrangler dev`.
+
+The local check does not require Cloudflare login or API credentials. Authenticated API calls will not work locally unless valid Access headers and backend configuration are supplied.
+
+## Deploy
+
+After verifying Cloudflare Access, variables, secrets, and any optional bindings:
+
+```sh
+npx wrangler deploy
 ```
-wrangler dev
-```
 
-Access checks do not run locally without a valid token, so `/api/scan` will return 401 in local dev. Use the deployed Worker to test scanning.
+Cloudflare Workers Builds should use the repository's `main` branch and `npx wrangler deploy` as the deploy command. Keep automatic builds disabled until the dry-run build passes and the Cloudflare configuration has been reconciled.
+
+## Data and backups
+
+The collection is stored in the browser's IndexedDB, not in Cloudflare D1 or R2. It does not automatically sync between browsers/devices. Use the app's backup/export and restore features to move or preserve the collection. Clearing browser data can remove the local collection, so keep an external backup.
 
 ## Safety
 
-- Never commit `.dev.vars`, API keys, or any file containing the team domain or policy values if they are private to your account.
-- Backups are the only copy of your collection outside the browser. The app's Save backup and Share buttons export everything, including photos.
-- Restore only accepts files with `app: "card-binder"` and a supported version, and previews changes before writing.
-
-## Version
-
-The page footer shows the version string from `public/index.html` (`APP`). Keep that in sync with the Git tag when you release.
+- Never commit `.dev.vars`, `.env`, API keys, Access values, or personal backup JSON files.
+- Do not use the app's price-check output as a guaranteed market value; verify exact parallel, serial numbering, grade, and shipping.
+- Do not deploy a changed Worker until the local dry-run build succeeds.
