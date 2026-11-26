@@ -123,3 +123,42 @@ Earlier decisions included local browser storage (IndexedDB), Claude image readi
 ## 7. Resuming this project
 
 Current priority is **recovering the actual source of the Cloudflare Worker v7 app**, not rebuilding the older Claude Artifact app. Keep Cloudflare builds disabled until the recovered source has been checked into GitHub and successfully validated.
+
+---
+
+## 8. Source recovery and repository repair (Nov 26, 2026)
+
+The Nov 26 upload supplied the current Cloudflare app source candidate:
+- `index.html`: Card Binder v7 page, with IndexedDB-backed collection data, card management, photo workflows, scan, price-check, and backup/restore UI.
+- `worker.js`: Cloudflare Worker routes for `/api/status`, `/api/scan`, and `/api/price`, plus Cloudflare Access JWT verification and optional Anthropic / Workers AI backends.
+
+The recovered files are now organized to match the Worker import and Wrangler entry point:
+- `public/index.html`
+- `src/worker.js`
+
+Configuration cleanup:
+- `wrangler.jsonc` is the canonical configuration.
+- Added the `Text` module rule needed to import `public/index.html` as a string.
+- Kept the existing Worker name `card-binder` and compatibility date.
+- Added `keep_vars: true` so Wrangler does not clear dashboard-managed plain-text variables during deployment.
+- Removed the unused static-assets binding from the canonical config; the Worker serves its imported HTML directly.
+- The old duplicate `wrangler.toml` and root-level source copies are being retired to avoid competing entry points/configuration.
+- Replaced the broken package test script (which pointed to a nonexistent test file) with `npm run check`, a Wrangler dry-run bundle command.
+
+Verified from source:
+- Collection records and card images are stored in browser IndexedDB; this source does not use D1 or R2.
+- API routes are Access-gated.
+- Scan can use Anthropic or an optional Workers AI binding.
+- Price check requires the Anthropic secret.
+- KV usage tracking is optional; without KV, usage counts are per Worker isolate.
+
+Important deployment caveat:
+- The Worker code and source layout are now aligned, but a successful Wrangler dry-run has not yet been run in a Node environment.
+- The existing Cloudflare Access values, secret, and optional AI/KV bindings have not been inspected from this session. The prior Nov 22 Worker review recorded that the live Worker had no bindings at that time; this must be rechecked before deployment.
+- Keep Cloudflare Workers Builds disabled until the dry-run passes and the current dashboard configuration is reconciled. No production deployment has been performed by this source-repair work.
+
+### Immediate next actions
+1. Run `npm install` and `npm run check` from a clean checkout.
+2. Review the live Worker's Access settings, `TEAM_DOMAIN`, `POLICY_AUD`, `ANTHROPIC_API_KEY`, and any optional `AI` / `USAGE` bindings without sharing secret values in chat.
+3. Test `/api/status`, card scanning, price check, backup, and restore.
+4. Only then enable Workers Builds on `main`.
