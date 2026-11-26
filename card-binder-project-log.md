@@ -153,12 +153,11 @@ Verified from source:
 - KV usage tracking is optional; without KV, usage counts are per Worker isolate.
 
 Important deployment caveat:
-- The Worker code and source layout are now aligned, but a successful Wrangler dry-run has not yet been run in a Node environment.
+- The Worker code and source layout are aligned. GitHub Actions run [#8](https://github.com/founder-evanmcrane/Card-binder-crane/actions/runs/45878040092) passed on commit `65e99a8`: `npm install` succeeded and `wrangler deploy --dry-run` bundled the Worker successfully (46.18 KiB upload estimate, 16.72 KiB gzip). The final run had no module-rule warning.
 - The existing Cloudflare Access values, secret, and optional AI/KV bindings have not been inspected from this session. The prior Nov 22 Worker review recorded that the live Worker had no bindings at that time; this must be rechecked before deployment.
 - Keep Cloudflare Workers Builds disabled until the dry-run passes and the current dashboard configuration is reconciled. No production deployment has been performed by this source-repair work.
 
 ### Immediate next actions
-1. Run `npm install` and `npm run check` from a clean checkout.
-2. Review the live Worker's Access settings, `TEAM_DOMAIN`, `POLICY_AUD`, `ANTHROPIC_API_KEY`, and any optional `AI` / `USAGE` bindings without sharing secret values in chat.
-3. Test `/api/status`, card scanning, price check, backup, and restore.
-4. Only then enable Workers Builds on `main`.
+1. Review the live Worker's Access settings, `TEAM_DOMAIN`, `POLICY_AUD`, `ANTHROPIC_API_KEY`, and any optional `AI` / `USAGE` bindings without sharing secret values in chat.
+2. Test `/api/status`, card scanning, price check, backup, and restore against a preview deployment.
+3. Only then enable Workers Builds on `main`.
