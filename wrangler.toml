@@ -1,0 +1,26 @@
+name = "card-binder"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+
+# Lets src/worker.js import public/index.html as a string.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+
+# Optional: Workers AI for scanning (no external key needed for scans).
+# [ai]
+# binding = "AI"
+
+# Optional: KV namespace for the daily usage limit (otherwise counted per instance).
+# [[kv_namespaces]]
+# binding = "USAGE"
+# id = "your-kv-namespace-id"
+
+# Non-secret settings. Put real values in the dashboard or with `wrangler secret put`.
+# [vars]
+# TEAM_DOMAIN = "https://YOUR-TEAM.cloudflareaccess.com"
+# POLICY_AUD = "your-access-application-audience-tag"
+# DAILY_LIMIT = "150"
+
+# Secrets (never commit these):
+#   wrangler secret put ANTHROPIC_API_KEY
